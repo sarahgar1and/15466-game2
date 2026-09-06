@@ -37,6 +37,13 @@ Load< Scene > frog_scene(LoadTagDefault, []() -> Scene const * {
 });
 
 PlayMode::PlayMode() : scene(*frog_scene) {
+	for (auto &transform : scene.transforms) {
+		if (transform.name == "Body") body = &transform;
+	}
+	if (body == nullptr) throw std::runtime_error("Body not found.");
+
+	body_position = body->position;
+	body_scale = body->scale;
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
@@ -83,25 +90,26 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = false;
 			return true;
 		}
-	} else if (evt.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-		if (SDL_GetWindowRelativeMouseMode(Mode::window) == false) {
-			SDL_SetWindowRelativeMouseMode(Mode::window, true);
-			return true;
-		}
-	} else if (evt.type == SDL_EVENT_MOUSE_MOTION) {
-		if (SDL_GetWindowRelativeMouseMode(Mode::window) == true) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
-			return true;
-		}
-	}
+	} 
+	// else if (evt.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+	// 	if (SDL_GetWindowRelativeMouseMode(Mode::window) == false) {
+	// 		SDL_SetWindowRelativeMouseMode(Mode::window, true);
+	// 		return true;
+	// 	}
+	// } else if (evt.type == SDL_EVENT_MOUSE_MOTION) {
+	// 	if (SDL_GetWindowRelativeMouseMode(Mode::window) == true) {
+	// 		glm::vec2 motion = glm::vec2(
+	// 			evt.motion.xrel / float(window_size.y),
+	// 			-evt.motion.yrel / float(window_size.y)
+	// 		);
+	// 		camera->transform->rotation = glm::normalize(
+	// 			camera->transform->rotation
+	// 			* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
+	// 			* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
+	// 		);
+	// 		return true;
+	// 	}
+	// }
 
 	return false;
 }
@@ -109,8 +117,16 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void PlayMode::update(float elapsed) {
 
 	//slowly rotates through [0,1):
-	// wobble += elapsed / 10.0f;
-	// wobble -= std::floor(wobble);
+	wobble += elapsed / 10.0f;
+	wobble -= std::floor(wobble);
+
+	float squish = ((0.5f * std::sin(wobble * 2.0f * 2.0f * float(M_PI)) + 0.5f) + 1.5f) * 0.5f;
+	if (squish < 1.0f) wobble = 0;
+	// std::cout << squish << std::endl;
+	// float move = std::sin(wobble * 10.0f) * 0.5f;
+
+	body->scale = glm::vec3(body_scale.x, body_scale.y, body_scale.z * squish);
+	// body->position.z = body_position.z + move;
 
 	// hip->rotation = hip_base_rotation * glm::angleAxis(
 	// 	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
@@ -126,26 +142,26 @@ void PlayMode::update(float elapsed) {
 	// );
 
 	//move camera:
-	{
+	// {
 
-		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
-		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
-		if (!down.pressed && up.pressed) move.y = 1.0f;
+	// 	//combine inputs into a move:
+	// 	constexpr float PlayerSpeed = 30.0f;
+	// 	glm::vec2 move = glm::vec2(0.0f);
+	// 	if (left.pressed && !right.pressed) move.x =-1.0f;
+	// 	if (!left.pressed && right.pressed) move.x = 1.0f;
+	// 	if (down.pressed && !up.pressed) move.y =-1.0f;
+	// 	if (!down.pressed && up.pressed) move.y = 1.0f;
 
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
+	// 	//make it so that moving diagonally doesn't go faster:
+	// 	if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
 
-		glm::mat4x3 frame = camera->transform->make_parent_from_local();
-		glm::vec3 frame_right = frame[0];
-		//glm::vec3 up = frame[1];
-		glm::vec3 frame_forward = -frame[2];
+	// 	glm::mat4x3 frame = camera->transform->make_parent_from_local();
+	// 	glm::vec3 frame_right = frame[0];
+	// 	//glm::vec3 up = frame[1];
+	// 	glm::vec3 frame_forward = -frame[2];
 
-		camera->transform->position += move.x * frame_right + move.y * frame_forward;
-	}
+	// 	camera->transform->position += move.x * frame_right + move.y * frame_forward;
+	// }
 
 	//reset button press counters:
 	left.downs = 0;
