@@ -32,9 +32,21 @@ struct PlayMode : Mode {
 	glm::vec3 body_position;
 	glm::vec3 body_scale;
 
+	Scene::Transform *currFly = nullptr;
+	glm::vec3 fly_position;
+	glm::vec3 offScreen = glm::vec3(0.0f, 0.0f, -1000.0f); //add to pos vector to move off screen
+
 	float wobble = 0.0f;
-	float squishSpeed = 0.3f;
-	
+
+	enum Stage {
+		BABY,
+		TWEEN,
+		ADULT
+	};
+
+	float get_scale_by_stage(Stage s);
+	Stage stage = BABY;
+	int score = 0;
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
