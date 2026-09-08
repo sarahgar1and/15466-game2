@@ -25,15 +25,21 @@ struct PlayMode : Mode {
 	Scene::Transform *body = nullptr;
 	glm::vec3 body_scale;
 
-	Scene::Transform *currFly = nullptr;
+	Scene::Transform *Fly = nullptr;
+	Scene::Transform *wingL = nullptr;
+	Scene::Transform *wingR = nullptr;
 	glm::vec3 offScreen = glm::vec3(0.0f, 0.0f, -1000.0f); //add to pos vector to move off screen
 	glm::vec3 target_position;
 	bool update_fly(bool update_curr_pos);
 	glm::vec3 get_new_fly_position();
 	float FlySpeed = 3.0f;
 	glm::vec3 fly_direction;
+	glm::quat fly_rotation;
+	glm::quat wingL_rotation;
+	glm::quat wingR_rotation;
 
 	float wobble = 0.0f;
+	float wing_wobble = 0.0f;
 
 	int score = 0;
 	

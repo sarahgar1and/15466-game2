@@ -14,6 +14,6 @@ Screen Shot:
 - Click flies with mouse
 
 ### Goal
-Reach 100 flies for a fully grown frog friend. 
+Reach 100 flies for a fully grown frog friend. See score in bottom left corner.
 
 This game was built with [NEST](NEST.md).
