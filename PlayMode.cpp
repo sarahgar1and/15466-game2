@@ -15,8 +15,37 @@
 // From game1
 std::random_device rd; 
 std::mt19937 gen(rd());
+std::uniform_int_distribution<int> dist_01(0, 1);
 std::uniform_real_distribution<float> dist_x(-9.0f, 8.0f);
 std::uniform_real_distribution<float> dist_z(1.0f, 5.0f);
+
+glm::vec3 PlayMode::get_new_fly_position(){
+	return glm::vec3(dist_x(gen), currFly->position.y, dist_z(gen));
+}
+
+// Set a new random position for the fly
+bool PlayMode::update_fly(bool update_curr_pos){
+	if (update_curr_pos){
+		int flip_axis = dist_01(gen);
+		int flip_sign = dist_01(gen);
+		glm::vec3 newPos;
+		if (flip_axis){
+			 newPos = glm::vec3(flip_sign ? -10.0f : 10.0f, currFly->position.y, dist_z(gen));
+		} else {
+			newPos = glm::vec3(dist_x(gen), currFly->position.y, flip_sign ? -1.0f : 7.0f);
+		}
+		currFly->position = newPos;
+	}
+
+	target_position = get_new_fly_position();
+	
+	fly_direction = glm::normalize(target_position - currFly->position);
+
+	// std::cout << "( " << fly_direction.x << ", " <<fly_direction.y << ", " << fly_direction.z <<" ) " << std::endl;
+	// std::cout << "x =" << newPos.x << " z =" << newPos.z << std::endl;
+	
+	return true;
+}
 
 GLuint frog_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > frog_meshes(LoadTagDefault, []() -> MeshBuffer const * {
@@ -51,6 +80,8 @@ PlayMode::PlayMode() : scene(*frog_scene) {
 	if (currFly == nullptr) throw std::runtime_error("Fly not found.");
 
 	body_scale = body->scale;
+	target_position = get_new_fly_position();
+	fly_direction = glm::normalize(target_position - currFly->position);
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
@@ -58,16 +89,6 @@ PlayMode::PlayMode() : scene(*frog_scene) {
 }
 
 PlayMode::~PlayMode() {
-}
-
-// Set a new random position for the fly
-bool PlayMode::update_fly(){
-	glm::vec3 newPos = glm::vec3(dist_x(gen), currFly->position.y, dist_z(gen));
-	currFly->position = newPos;
-
-	// std::cout << "x =" << newPos.x << " z =" << newPos.z << std::endl;
-	
-	return true;
 }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
@@ -94,7 +115,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			
 			score++;
 			// std::cout << "You caught a fly!" << std::endl;
-			update_fly();
+			update_fly(true);
 		}
 		
 		return true;
@@ -116,13 +137,21 @@ void PlayMode::update(float elapsed) {
 	float scale = std::min(std::max((float)(score+25)/100.0f, 0.25f), 1.25f);
 	body->scale = glm::vec3(body_scale.x, body_scale.y, body_scale.z * squish) * scale;
 
-	// instead of timer, get next target positon and use direction vector to 
-	// slowly increment position
-	timer += elapsed;
-	if (timer >= 2.0f){
-		timer = 0.0f;
-		update_fly();
+	// Check if target_position has been pasted
+	// need to know direction (left/right, up/down)
+	// Positive x = left, negative x = right (sorry i flipped it)
+	// Positive z = up, negative = down
+	if ((fly_direction.x < 0 && currFly->position.x <= target_position.x)
+		|| (fly_direction.x >= 0 && currFly->position.x >= target_position.x)){
+		if ((fly_direction.z > 0 && currFly->position.z >= target_position.z)
+		|| (fly_direction.z <= 0 && currFly->position.z <= target_position.z)){
+			update_fly(false);
+		}
 	}
+	
+	
+	float distance = FlySpeed * elapsed;
+	currFly->position = currFly->position + distance * fly_direction;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {

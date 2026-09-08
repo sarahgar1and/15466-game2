@@ -27,8 +27,11 @@ struct PlayMode : Mode {
 
 	Scene::Transform *currFly = nullptr;
 	glm::vec3 offScreen = glm::vec3(0.0f, 0.0f, -1000.0f); //add to pos vector to move off screen
-	bool update_fly();
-	float timer = 0.0f;
+	glm::vec3 target_position;
+	bool update_fly(bool update_curr_pos);
+	glm::vec3 get_new_fly_position();
+	float FlySpeed = 3.0f;
+	glm::vec3 fly_direction;
 
 	float wobble = 0.0f;
 
